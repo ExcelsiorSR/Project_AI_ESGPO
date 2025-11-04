@@ -1,2 +1,47 @@
 # Project_AI_ESGPO
 An AI-driven multi-objective optimizer that finds the Pareto Optimal Frontier for portfolios based on Risk, Return, and ESG scores. Built with pymoo and streamlit for an IIT Guwahati term project.
+# 🌿 AI-Driven ESG Optimizer
+
+**An AI-driven multi-objective optimizer that finds the Pareto Optimal Frontier for portfolios based on Risk, Return, and ESG scores. Built with `pymoo` and `streamlit` for an IIT Guwahati term project.**
+
+---
+
+This tool builds a multi-page Streamlit web application that allows users to find optimal investment portfolios from the NIFTY 50, based not only on traditional financial metrics but also on their personal ethical values.
+
+## 🔬 Core Methodology
+
+This project rejects simple, unstable predictive models (like LSTMs or ARIMA) which were found to produce unrealistic forecasts. Instead, it focuses on a robust, academically-defensible methodology:
+
+1.  **Stable Data:** The engine uses 5-year historical data (2020-2025) for NIFTY 50 stocks as a stable, provable baseline for risk and return.
+2.  **Multi-Objective AI:** The core of the project is a **Prescriptive AI (the NSGA-II Evolutionary Algorithm)**.
+3.  **The 3D Frontier:** The AI's job is to solve a 3-objective problem (Maximize Return, Minimize Risk, Maximize ESG Score) to find the 100 "best" possible trade-offs, known as the **Pareto Optimal Frontier**.
+
+## ✨ Key Features
+
+* **Multi-Page Streamlit App:** A clean, user-friendly interface with three distinct pages.
+* **Recommender Dashboard:** A simple "Newbie" mode where a user can set their minimum ESG preference and their financial goal (e.g., "Max Sharpe Ratio" or "Max Return") to get a single, optimized portfolio.
+* **Sector & Stock Allocation:** The app visualizes the recommended portfolio with both a Pie Chart (for stock-level) and a Treemap (for sector-level) allocation.
+* **3D Explorer:** An advanced "Expert" mode that renders the *entire* 3D Pareto Frontier using Plotly, allowing the user to visually explore the trade-offs between Risk, Return, and ESG.
+* **Stock Chart Explorer:** A separate page for analyzing the historical candlestick chart (with `yfinance`) for any stock included in the final model.
+
+## 🛠️ Tech Stack
+
+* **Data Engineering:** `pandas`, `numpy`
+* **Financial Data:** `yfinance`
+* **AI (Optimizer):** `pymoo` (using the NSGA-II algorithm)
+* **Web App & Dashboard:** `streamlit`
+* **Visualizations:** `plotly` (for 3D plots, pie charts, treemaps, and candlesticks)
+* **Environment:** `conda`
+
+## 🚀 How to Run Locally
+
+This project is in two parts: a one-time "engine" script (`main.py`) that generates the AI results, and a persistent web app (`app.py`) that serves them.
+
+**1. Setup Environment:**
+```bash
+# Create and activate a conda environment
+conda create -n ESGPO python=3.10
+conda activate ESGPO
+
+# Install all required packages
+pip install -r requirements.txt
