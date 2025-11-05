@@ -268,7 +268,7 @@ if ticker_list:
         
         st.markdown("""
         Select an AI model (time horizon) to see its internal features, historical predictions, and feature importance for this stock. 
-        </br>**NOTE:** This explorer is only available for short-term AI models, since long-term models do not use AI predictions.
+        \n **NOTE:** This explorer is only available for short-term AI models, since long-term models do not use AI predictions.
         """)
 
         ai_period = st.selectbox(
