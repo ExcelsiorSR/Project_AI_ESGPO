@@ -152,7 +152,7 @@ Here is a breakdown of each module:
     *Here you'll find links to all the major Short Term Portfolio statistics i.e. from 3 days to 90 days.*
 
 * **⏳ Long Term Optimizer:**
-    *Here you'll find links to all the major Short Term Portfolio statistics i.e. from 6 months to 60 months.*
+    *Here you'll find links to all the major Long Term Portfolio statistics i.e. from 6 months to 60 months.*
 
 * **🔬 Portfolio Builder:**
     *This is where the real magic happens. Here you'll be able to see the detailed portfolio allocations you need to do in order to get the profit probability predicted in the page. You can as well customise your own portfolio by changing the Profit Goals, Risk Tolerance and Ethical Priority and can as well find a better portfolio than your selected one and can directly backtest it from here.*
@@ -161,7 +161,7 @@ Here is a breakdown of each module:
     *This page provides a detailed, granular analysis of a single selected stock, showing its historical performance, risk metrics, and individual ESG score breakdown. Along with it you can also find the detailed metrics the model studied for giving the result.*
 
 * **📊 Backtester:**
-    *(This page allows users to test the historical performance of the optimized portfolios (both short and long-term) to see how they would have performed in the past provided they had invested in the stocks suggested.*
+    *(This page allows users to test the historical performance of the optimized portfolios (both short and long-term) to see how they would have performed in the past to see how those stocks would have performed.*
 
 ## 🤝 Contributing
 
