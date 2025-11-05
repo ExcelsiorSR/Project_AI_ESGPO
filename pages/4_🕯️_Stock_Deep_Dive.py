@@ -9,7 +9,7 @@ import xgboost as xgb
 from sklearn.model_selection import train_test_split
 from plotly.subplots import make_subplots
 import warnings
-
+import datetime
 # Suppress warnings
 warnings.filterwarnings("ignore")
 
@@ -45,7 +45,7 @@ def get_stock_data_fixed(ticker, start, end):
     try:
         data = yf.download(ticker, start=start, end=end)
         
-        # --- 💡 HANDLE YFINANCE MULTIINDEX BUG 💡 ---
+        # ---  HANDLING YFINANCE MULTIINDEX BUG  ---
         if isinstance(data.columns, pd.MultiIndex):
             data = data.xs(ticker, axis=1, level=1)
             
@@ -93,7 +93,7 @@ def create_features_for_explorer(price_df, horizons):
 
 # --- Model Training Function ---
 @st.cache_data
-def get_model_and_historical_predictions(ticker, horizon_days, start_date='2020-01-01', end_date='2025-11-01'):
+def get_model_and_historical_predictions(ticker, horizon_days, start_date='2020-01-02', end_date='2025-11-05'):
     try:
         raw_data = yf.download(ticker, start=start_date, end=end_date)
         if raw_data.empty: return None, None, "Error: Could not download data."
@@ -238,7 +238,7 @@ if ticker_list:
         
         col1, col2 = st.columns(2)
         with col1:
-            start_date = st.date_input("Start Date", value=pd.to_datetime('2020-01-01'))
+            start_date = st.date_input("Start Date", value=pd.to_datetime('2020-01-02'))
         with col2:
             end_date = st.date_input("End Date", value=pd.Timestamp.today())
 
@@ -246,10 +246,10 @@ if ticker_list:
             data = get_stock_data_fixed(selected_ticker, start_date, end_date) # Uses the fixed function
             if not data.empty:
                 fig = go.Figure(data=[go.Candlestick(x=data.index,
-                                                    open=data['Open'],
-                                                    high=data['High'],
-                                                    low=data['Low'],
-                                                    close=data['Close'])]) 
+                                                     open=data['Open'],
+                                                     high=data['High'],
+                                                     low=data['Low'],
+                                                     close=data['Close'])]) 
                 fig.update_layout(
                     title=f"{selected_ticker} Candlestick Chart",
                     xaxis_title="Date", yaxis_title="Stock Price (INR)",
