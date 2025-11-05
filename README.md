@@ -108,3 +108,71 @@ This project is organized into two main parts: a data processing "engine" (`main
 * **Data Files**
     * **Input:** `final_data.csv` is the only manual input file required by the engine.
     * **Output:** All other `.csv` files are **generated** by `main.py`. The app relies on these files to function.
+
+## 🛠️ Installation
+
+Before running the project, you need to install all the required Python libraries.
+
+1.  Open your terminal or command prompt.
+2.  Navigate to the project's root folder (`Project_ES GPO/`).
+3.  Run the following command to install the dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## 🚀 How to Run
+
+There are two main steps to run this project:
+
+### Step 1: Run the Data Engine (Once)
+
+You must first run the `main.py` script to perform all the calculations and generate the result files that the app needs.
+
+```bash
+python main.py
+```
+(This may take a few minutes to complete. You only need to do this once, or whenever the final_data.csv changes.)
+
+### Step 2: Launch the Streamlit App
+Once the engine has finished, you can launch the interactive web application.
+```bash
+streamlit run Home.py
+```
+This will open the application in your default web browser.
+## ✨ Features / App Overview
+
+This application provides a multi-faceted toolset for analyzing and optimizing ESG (Environmental, Social, and Governance) portfolios based on NIFTY 50 data.
+
+Here is a breakdown of each module:
+
+* **🏠 Home:**
+    *This is where you'll land at first. It includes all the major page navigations you can have i.e. from direct links to optimizer to the Backtester as well. It includes the redirection link to the detailed Do's and Don'ts guidelines from SEBI. *
+
+* **🚀 Short Term Optimizer:**
+    *Here you'll find links to all the major Short Term Portfolio statistics i.e. from 3 days to 90 days.*
+
+* **⏳ Long Term Optimizer:**
+    *Here you'll find links to all the major Short Term Portfolio statistics i.e. from 6 months to 60 months.*
+
+* **🔬 Portfolio Builder:**
+    *This is where the real magic happens. Here you'll be able to see the detailed portfolio allocations you need to do in order to get the profit probability predicted in the page. You can as well customise your own portfolio by changing the Profit Goals, Risk Tolerance and Ethical Priority and can as well find a better portfolio than your selected one and can directly backtest it from here.*
+
+* **🕯️ Stock Deep Dive:**
+    *This page provides a detailed, granular analysis of a single selected stock, showing its historical performance, risk metrics, and individual ESG score breakdown. Along with it you can also find the detailed metrics the model studied for giving the result.*
+
+* **📊 Backtester:**
+    *(This page allows users to test the historical performance of the optimized portfolios (both short and long-term) to see how they would have performed in the past provided they had invested in the stocks suggested.*
+
+## 🤝 Contributing
+
+Contributions are welcome! If you have suggestions for improvements or find any bugs, please feel free to:
+
+1.  Fork the repository.
+2.  Create a new branch (`git checkout -b feature/YourAmazingFeature`).
+3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4.  Push to the branch (`git push origin feature/YourAmazingFeature`).
+5.  Open a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License. See the `LICENSE` file for more details.
