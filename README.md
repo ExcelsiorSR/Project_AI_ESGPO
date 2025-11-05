@@ -1,6 +1,6 @@
 # 🚀 AI-Driven Multi-Objective ESG Portfolio Optimizer
 
-This is a full-stack, end-to-end Term Project for a 6-credit B.S. Data Science and AI course. It is a web application that builds optimal investment portfolios by balancing three conflicting objectives: **Profitability**, **Risk**, and **ESG (Environmental, Social, Governance) Score**.
+This is a full-stack, end-to-end Term Project. It is a web application that builds optimal investment portfolios by balancing three conflicting objectives: **Profitability**, **Risk**, and **ESG (Environmental, Social, Governance) Score**.
 
 The application uses **XGBoost** for short-term profit predictions and a **Multi-Objective Evolutionary Algorithm (NSGA-II)** to discover the 3D "Pareto Optimal Frontier" for **9 distinct time horizons**.
 
