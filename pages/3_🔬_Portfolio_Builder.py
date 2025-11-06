@@ -286,6 +286,13 @@ if solutions is not None:
     else:
         user_choice_index = st.session_state[session_key]
         user_choice = solutions.loc[user_choice_index]
+        initial_cash = st.number_input(
+        "Initial Investment (₹)", 
+        value=100000, 
+        step=10000, 
+        key="cash_input_global",
+        help="Set the starting cash for the backtest."
+        )
         
         risk_tolerance = user_choice['CVaR_Risk_Display'] * 1.05 
         esg_tolerance = user_choice['ESG_Score'] * 0.95
@@ -307,6 +314,7 @@ if solutions is not None:
                 st.session_state.deep_link_period = period
                 st.session_state.deep_link_index = user_choice.name
                 st.session_state.deep_link_name = f"Your Choice (Portfolio {user_choice.name})"
+                st.session_state.deep_link_cash = initial_cash
                 st.switch_page("pages/5_📊_Backtester.py")
             # --- End of button ---
 
@@ -334,6 +342,7 @@ if solutions is not None:
                     st.session_state.deep_link_period = period
                     st.session_state.deep_link_index = user_choice.name
                     st.session_state.deep_link_name = f"Your Choice (Portfolio {user_choice.name})"
+                    st.session_state.deep_link_cash = initial_cash
                     st.switch_page("pages/5_📊_Backtester.py")
                 # --- End of button ---
 
@@ -349,6 +358,7 @@ if solutions is not None:
                     st.session_state.deep_link_period = period
                     st.session_state.deep_link_index = our_recommendation.name
                     st.session_state.deep_link_name = f"AI Recommendation (Portfolio {our_recommendation.name})"
+                    st.session_state.deep_link_cash = initial_cash
                     st.switch_page("pages/5_📊_Backtester.py")
                 # --- End of button ---
 
