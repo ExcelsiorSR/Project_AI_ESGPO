@@ -1,6 +1,6 @@
 # 🚀 AI-Driven Multi-Objective ESG Portfolio Optimizer
 
-This is a full-stack, end-to-end Term Project. It is a web application that builds optimal investment portfolios by balancing three conflicting objectives: **Profitability**, **Risk**, and **ESG (Environmental, Social, Governance) Score**.
+This is a full-stack, end-to-end, Term Project. It is a web application that builds optimal investment portfolios by balancing three conflicting objectives: **Profitability**, **Risk**, and **ESG (Environmental, Social, Governance) Score**.
 
 The application uses **XGBoost** for short-term profit predictions and a **Multi-Objective Evolutionary Algorithm (NSGA-II)** to discover the 3D "Pareto Optimal Frontier" for **9 distinct time horizons**.
 
@@ -146,7 +146,7 @@ This application provides a multi-faceted toolset for analyzing and optimizing E
 Here is a breakdown of each module:
 
 * **🏠 Home:**
-    *This is where you'll land at first. It includes all the major page navigations you can have i.e. from direct links to optimizer to the Backtester as well. It includes the redirection link to the detailed Do's and Don'ts guidelines from SEBI. *
+    *This is where you'll land at first. It includes all the major page navigations you can have i.e. from direct links to optimizer to the Backtester as well. It includes the redirection link to the detailed Do's and Don'ts guidelines from SEBI.*
 
 * **🚀 Short Term Optimizer:**
     *Here you'll find links to all the major Short Term Portfolio statistics i.e. from 3 days to 90 days.*
