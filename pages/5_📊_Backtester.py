@@ -207,13 +207,13 @@ if price_data is not None:
         period = st.session_state.deep_link_period
         index = st.session_state.deep_link_index
         name = st.session_state.deep_link_name
-        cash_amount = st.session_state.deep_link_cash
+        cash_amount = st.session_state.get('deep_link_cash', 100000)
         
         # 2. IMPORTANT: Clearing session state so it's a one-time operation
         del st.session_state.deep_link_period
         del st.session_state.deep_link_index
         del st.session_state.deep_link_name
-        del st.session_state.deep_link_cash
+        st.session_state.pop('deep_link_cash', None)
 
         # 3. Loading the correct data
         _, weights = load_period_data(period)
