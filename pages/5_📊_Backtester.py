@@ -154,8 +154,12 @@ def display_backtest_results(stats, name, selected_weights, nifty_benchmark):
             st.warning("Could not align NIFTY benchmark data for this short period.")
             return
 
-        nifty_norm = (aligned_df["NIFTY 50"] / aligned_df["NIFTY 50"].iloc[0]) * cash
-        equity_norm = (aligned_df["Portfolio"] / aligned_df["Portfolio"].iloc[0]) * cash
+        # --- THIS IS THE FIX ---
+        # Get the initial cash value from the first point of the equity curve
+        initial_cash_value = stats['Equity Curve'].iloc[0]
+        
+        nifty_norm = (aligned_df["NIFTY 50"] / aligned_df["NIFTY 50"].iloc[0]) * initial_cash_value
+        equity_norm = (aligned_df["Portfolio"] / aligned_df["Portfolio"].iloc[0]) * initial_cash_value
         
         fig = go.Figure()
         fig.add_trace(go.Scatter(
@@ -163,10 +167,12 @@ def display_backtest_results(stats, name, selected_weights, nifty_benchmark):
             name=f'{name}', line=dict(color='blue', width=2)
         ))
         fig.add_trace(go.Scatter(
-            x=nifty_norm.index, y=nifty_norm.values,
+            x=nif_norm.index, y=nif_norm.values,
             name='NIFTY 50 Benchmark', line=dict(color='gray', dash='dot', width=2)
         ))
-        fig.update_layout(title=f"Portfolio Growth (₹{cash:,.0f} Initial Investment)", legend_title="Strategy")
+        
+        # --- AND FIX THE TITLE ---
+        fig.update_layout(title=f"Portfolio Growth (₹{initial_cash_value:,.0f} Initial Investment)", legend_title="Strategy")
         st.plotly_chart(fig, use_container_width=True)
     
     st.subheader("Portfolio Allocation Tested")
