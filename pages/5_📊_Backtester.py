@@ -132,7 +132,6 @@ def display_backtest_results(stats, name, selected_weights, nifty_benchmark):
 
     st.subheader("Key Performance Metrics")
     
-    # --- NEW: Use dynamic period label ---
     period_label = stats.get("Period Label", "")
     
     col1, col2, col3 = st.columns(3)
@@ -144,7 +143,6 @@ def display_backtest_results(stats, name, selected_weights, nifty_benchmark):
     
     if nifty_benchmark is not None:
         equity_curve = stats['Equity Curve']
-        # This reindex logic automatically filters the benchmark to the equity_curve's (shorter) date range
         nifty_series_aligned = nifty_benchmark.reindex(equity_curve.index).ffill().bfill()
         
         aligned_df = pd.concat([equity_curve, nifty_series_aligned], axis=1).dropna()
@@ -154,8 +152,6 @@ def display_backtest_results(stats, name, selected_weights, nifty_benchmark):
             st.warning("Could not align NIFTY benchmark data for this short period.")
             return
 
-        # --- THIS IS THE FIX ---
-        # Get the initial cash value from the first point of the equity curve
         initial_cash_value = stats['Equity Curve'].iloc[0]
         
         nifty_norm = (aligned_df["NIFTY 50"] / aligned_df["NIFTY 50"].iloc[0]) * initial_cash_value
@@ -167,17 +163,16 @@ def display_backtest_results(stats, name, selected_weights, nifty_benchmark):
             name=f'{name}', line=dict(color='blue', width=2)
         ))
         fig.add_trace(go.Scatter(
-            x=nif_norm.index, y=nif_norm.values,
+            # --- THIS LINE IS THE FIX ---
+            x=nifty_norm.index, y=nifty_norm.values,
             name='NIFTY 50 Benchmark', line=dict(color='gray', dash='dot', width=2)
         ))
         
-        # --- AND FIX THE TITLE ---
         fig.update_layout(title=f"Portfolio Growth (₹{initial_cash_value:,.0f} Initial Investment)", legend_title="Strategy")
         st.plotly_chart(fig, use_container_width=True)
     
     st.subheader("Portfolio Allocation Tested")
     st.dataframe(selected_weights[selected_weights > 0.01].sort_values(ascending=False))
-
 # ======================================================================
 # --- 5.  Main Page Logic (MODIFIED) ---
 # ======================================================================
