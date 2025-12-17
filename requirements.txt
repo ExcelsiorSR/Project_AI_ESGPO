@@ -1,9 +1,11 @@
-pandas
-numpy
-yfinance
 streamlit
+pandas
+yfinance
+numpy
 plotly
 pymoo
 xgboost
 scikit-learn
+matplotlib
+seaborn
 TA-Lib
