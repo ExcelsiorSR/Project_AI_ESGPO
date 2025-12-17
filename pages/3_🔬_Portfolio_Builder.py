@@ -19,27 +19,27 @@ st.set_page_config(
 PERIOD_DEFINITIONS = {
     "3D": {
         "title": "3-Day Sprint",
-        "return_label": "AI Profit Probability",
+        "return_label": "Projected Return (3D)", # CHANGED
         "is_ai": True
     },
     "7D": {
         "title": "7-Day Momentum",
-        "return_label": "AI Profit Probability",
+        "return_label": "Projected Return (7D)", # CHANGED
         "is_ai": True
     },
     "15D": {
         "title": "15-Day Swing",
-        "return_label": "AI Profit Probability",
+        "return_label": "Projected Return (15D)", # CHANGED
         "is_ai": True
     },
     "30D": {
         "title": "30-Day Outlook",
-        "return_label": "AI Profit Probability",
+        "return_label": "Projected Return (30D)", # CHANGED
         "is_ai": True
     },
     "3M": {
         "title": "3-Month Horizon",
-        "return_label": "AI Profit Probability",
+        "return_label": "Projected Return (3M)", # CHANGED
         "is_ai": True
     },
     "6M": {
@@ -65,7 +65,6 @@ PERIOD_DEFINITIONS = {
 }
 
 # --- Getting the period from SESSION STATE ---
-# This is set by the buttons on the welcome pages
 period = st.session_state.get("period", "30D") # Default to 30D
 if period not in PERIOD_DEFINITIONS:
     period = "30D"
@@ -89,21 +88,21 @@ def load_data(period_key):
     """
     solutions_file = f'optimized_solutions_{period_key}.csv'
     weights_file = f'optimized_weights_{period_key}.csv'
-    master_data_file = 'master_data_for_app.csv' # Our new sector/info source
+    master_data_file = 'master_data_for_app.csv' 
     
     try:
         solutions_df = pd.read_csv(solutions_file)
         weights_df = pd.read_csv(weights_file)
-        master_df = pd.read_csv(master_data_file, index_col=0) # <-- Fixed this!
+        master_df = pd.read_csv(master_data_file, index_col=0) 
     except FileNotFoundError as e:
         st.error(f"Error: Could not find data file: {e.filename}")
-        st.error(f"Please ensure `main_1.py` has run successfully and all 'optimized_..._{period_key}.csv' files are present.")
+        st.error(f"Please ensure `main_1.py` has run successfully.")
         return None, None, None
 
     # --- Create Sector Map ---
-    sector_map = master_df['Sector'] # <-- Fixed this!
+    sector_map = master_df['Sector'] 
     
-    # --- Data Cleaning (from main_1.py) ---
+    # --- Data Cleaning ---
     solutions_df['Return_Display'] = solutions_df['Return'] * 100
     solutions_df['CVaR_Risk_Display'] = solutions_df['CVaR_Risk'] * 100
     
@@ -112,11 +111,16 @@ def load_data(period_key):
 # --- Load the Data ---
 solutions, weights, sector_map = load_data(period)
 
-# --- Define Tooltips (now dynamic) ---
-help_return = f"{RETURN_LABEL} (0-100). For AI models, this is the profit probability. For long-term models, this is the annualized historical return. (Higher is better)"
-help_risk = "Conditional Value at Risk (CVaR) (0-100). Measures the expected loss in a 'tail risk' scenario. (Lower is better)"
-help_esg = "ESG Score (0-100) based on Environmental, Social, and Governance ratings. (Higher is better)"
-help_sharpe = f"{RETURN_LABEL} / CVaR Risk. A custom 'reward-for-risk' ratio. (Higher is better)"
+# --- Define Tooltips (Dynamic) ---
+if IS_AI_MODEL:
+    help_return = f"The Expected Return calculated by the AI, combining probability of profit with average historical gains/losses over {period}."
+else:
+    help_return = f"The historical Annualized Return of this portfolio strategy. (Higher is better)"
+
+help_risk = "Conditional Value at Risk (CVaR) (0-100). Measures expected loss in a worst-case scenario. (Lower is better)"
+help_esg = "ESG Score (0-100). (Higher is better)"
+help_sharpe = f"Reward-to-Risk Ratio. (Higher is better)"
+help_conf = "AI Confidence Score (0-100%). How sure the model is about this prediction."
 
 # ===================================
 # --- 3. MAIN APP (Dynamic) ---
@@ -134,11 +138,17 @@ if solutions is not None:
     top_portfolio = solutions.loc[solutions['Return'].idxmax()]
     top_portfolio_index = top_portfolio.name
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric(f"📈 {RETURN_LABEL}", f"{top_portfolio['Return_Display']:.2f}%", help=help_return)
-    col2.metric("📉 CVaR Risk", f"{top_portfolio['CVaR_Risk_Display']:.2f}%", help=help_risk)
-    col3.metric("🏆 Sharpe Ratio", f"{top_portfolio['Prob_Sharpe']:.2f}", help=help_sharpe)
-    col4.metric("🌿 ESG Score", f"{top_portfolio['ESG_Score']:.2f}", help=help_esg)
+    # Check if we have the 'Prob_Score' column (New backend feature)
+    has_prob_score = 'Prob_Score' in top_portfolio
+    
+    cols = st.columns(5 if has_prob_score else 4)
+    cols[0].metric(f"📈 {RETURN_LABEL}", f"{top_portfolio['Return_Display']:.2f}%", help=help_return)
+    cols[1].metric("📉 CVaR Risk", f"{top_portfolio['CVaR_Risk_Display']:.2f}%", help=help_risk)
+    cols[2].metric("🏆 Sharpe Ratio", f"{top_portfolio['Prob_Sharpe']:.2f}", help=help_sharpe)
+    cols[3].metric("🌿 ESG Score", f"{top_portfolio['ESG_Score']:.2f}", help=help_esg)
+    
+    if has_prob_score and IS_AI_MODEL:
+        cols[4].metric("🤖 AI Confidence", f"{top_portfolio['Prob_Score']*100:.1f}%", help=help_conf)
 
     with st.expander("Show Top Portfolio Allocation"):
         best_weights_series = weights.iloc[top_portfolio_index]
@@ -177,6 +187,15 @@ if solutions is not None:
     st.header("2. Customise Your Own Portfolio")
     st.markdown("Use the sliders to filter the optimal portfolios to find the ones that match your goals.")
 
+    # --- MOVED INPUT HERE SO IT IS AVAILABLE FOR ALL SELECTIONS ---
+    initial_cash = st.number_input(
+        "Initial Investment (₹)", 
+        value=100000, 
+        step=10000, 
+        key="cash_input_global",
+        help="Set the starting cash for the backtest."
+    )
+
     min_ret, max_ret = float(solutions['Return_Display'].min()), float(solutions['Return_Display'].max())
     min_risk, max_risk = float(solutions['CVaR_Risk_Display'].min()), float(solutions['CVaR_Risk_Display'].max())
     min_esg, max_esg = float(solutions['ESG_Score'].min()), float(solutions['ESG_Score'].max())
@@ -188,7 +207,7 @@ if solutions is not None:
         user_min_ret = st.slider(
             f"Minimum {RETURN_LABEL} (%)",
             min_value=min_ret, max_value=max_ret,
-            value=min_ret, step=0.1, format="%.2f", help=help_return
+            value=min_ret, step=0.01, format="%.2f", help=help_return
         )
     with col2:
         st.subheader("Risk Tolerance")
@@ -226,8 +245,14 @@ if solutions is not None:
         display_df['ESG_Score'] = display_df['ESG_Score'].apply(lambda x: f"{x:.1f}")
         display_df['Sharpe_Ratio'] = display_df['Prob_Sharpe'].apply(lambda x: f"{x:.2f}")
         
+        # Select columns to display
+        show_cols = [RETURN_LABEL, 'CVaR_Risk', 'Sharpe_Ratio', 'ESG_Score']
+        if 'Prob_Score' in display_df:
+            display_df['AI_Confidence'] = (display_df['Prob_Score'] * 100).apply(lambda x: f"{x:.1f}%")
+            show_cols.append('AI_Confidence')
+
         selected_row = st.dataframe(
-            display_df[[RETURN_LABEL, 'CVaR_Risk', 'Sharpe_Ratio', 'ESG_Score']],
+            display_df[show_cols],
             use_container_width=True,
             on_select="rerun",
             selection_mode="single-row"
@@ -276,17 +301,19 @@ if solutions is not None:
     # =================================================================
     st.header("3. Our Recommendation")
     
-    # --- Defining ALL keys at the top ---
     session_key = f'user_choice_index_{period}'
     ai_rec_key = f'ai_rec_index_{period}' 
 
     if session_key not in st.session_state or st.session_state[session_key] is None:
         st.info("Select a portfolio from the table in Part 2 to get a custom recommendation.")
-        st.session_state[ai_rec_key] = None # Clearing any old recommendation
+        st.session_state[ai_rec_key] = None 
     else:
         user_choice_index = st.session_state[session_key]
         user_choice = solutions.loc[user_choice_index]
         
+        # RETRIEVE CASH FROM THE INPUT IN PART 2
+        cash_for_backtest = st.session_state.get("cash_input_global", 100000)
+
         risk_tolerance = user_choice['CVaR_Risk_Display'] * 1.05 
         esg_tolerance = user_choice['ESG_Score'] * 0.95
         
@@ -300,15 +327,14 @@ if solutions is not None:
         if better_portfolios.empty:
             st.success("🎉 **Excellent Choice!**")
             st.markdown(f"The portfolio you've selected (Portfolio **{user_choice.name}**) is a top-tier choice. Our AI could not find another portfolio with a **higher {RETURN_LABEL}** that *also* maintained your approximate Risk and ESG levels.")
-            st.session_state[ai_rec_key] = None # No recommendation to save
+            st.session_state[ai_rec_key] = None 
             
-            # ---  ADDING BACKTEST BUTTON FOR USER'S CHOICE ---
             if st.button(f"📊 Backtest Your Choice (Portfolio {user_choice.name})", use_container_width=True, type="primary"):
                 st.session_state.deep_link_period = period
                 st.session_state.deep_link_index = user_choice.name
                 st.session_state.deep_link_name = f"Your Choice (Portfolio {user_choice.name})"
+                st.session_state.deep_link_cash = cash_for_backtest # PASS CASH
                 st.switch_page("pages/5_📊_Backtester.py")
-            # --- End of button ---
 
         else:
             st.success("😃 **A Better Option May Exist!**")
@@ -316,7 +342,6 @@ if solutions is not None:
             
             our_recommendation = better_portfolios.loc[better_portfolios['Return_Display'].idxmax()]
             
-            # --- Saving the index of the recommendation ---
             st.session_state[ai_rec_key] = our_recommendation.name 
             
             st.subheader("Comparison")
@@ -329,13 +354,12 @@ if solutions is not None:
                 st.metric("🏆 Sharpe Ratio", f"{user_choice['Prob_Sharpe']:.2f}", help=help_sharpe)
                 st.metric("🌿 ESG Score", f"{user_choice['ESG_Score']:.1f}", help=help_esg)
                 
-                # ---  ADDING BACKTEST BUTTON FOR USER'S CHOICE ---
                 if st.button(f"📊 Backtest Your Choice (Portfolio {user_choice.name})", key="backtest_user", use_container_width=True):
                     st.session_state.deep_link_period = period
                     st.session_state.deep_link_index = user_choice.name
                     st.session_state.deep_link_name = f"Your Choice (Portfolio {user_choice.name})"
+                    st.session_state.deep_link_cash = cash_for_backtest # PASS CASH
                     st.switch_page("pages/5_📊_Backtester.py")
-                # --- End of button ---
 
             with col_ai:
                 st.markdown(f"**Our Recommendation (Portfolio {our_recommendation.name})**")
@@ -344,13 +368,12 @@ if solutions is not None:
                 st.metric("🏆 Sharpe Ratio", f"{our_recommendation['Prob_Sharpe']:.2f}", delta=f"{our_recommendation['Prob_Sharpe'] - user_choice['Prob_Sharpe']:.2f}", help=help_sharpe)
                 st.metric("🌿 ESG Score", f"{our_recommendation['ESG_Score']:.1f}", delta=f"{our_recommendation['ESG_Score'] - user_choice['ESG_Score']:.1f}", help=help_esg)
                 
-                # ---  ADDING BACKTEST BUTTON FOR AI RECOMMENDATION ---
                 if st.button(f"📊 Backtest AI Recommendation (Portfolio {our_recommendation.name})", key="backtest_ai", use_container_width=True, type="primary"):
                     st.session_state.deep_link_period = period
                     st.session_state.deep_link_index = our_recommendation.name
                     st.session_state.deep_link_name = f"AI Recommendation (Portfolio {our_recommendation.name})"
+                    st.session_state.deep_link_cash = cash_for_backtest # PASS CASH
                     st.switch_page("pages/5_📊_Backtester.py")
-                # --- End of button ---
 
             with st.expander("Show Recommended Portfolio Allocation"):
                 rec_weights_series = weights.iloc[our_recommendation.name]
@@ -358,17 +381,15 @@ if solutions is not None:
                 rec_weights_df.columns = ['Weight']
                 rec_weights_df = rec_weights_df.merge(sector_map, left_index=True, right_index=True)
 
-                # --- ADDING CSV DOWNLOAD BUTTON FOR RECOMMENDED ALLOCATION ---
                 csv_data_rec = convert_df_to_csv(rec_weights_df[['Weight', 'Sector']].sort_values(by='Weight', ascending=False))
                 st.download_button(
                     label="📥 Download Recommended Allocation as CSV",
                     data=csv_data_rec,
                     file_name=f"Recommended_Portfolio_{period}_{our_recommendation.name}.csv",
                     mime='text/csv',
-                    key="download_rec_csv" # Adding a unique key
+                    key="download_rec_csv" 
                 )
                 
-
                 col_pie_rec, col_tree_rec = st.columns(2)
                 with col_pie_rec:
                     fig_pie_rec = px.pie(rec_weights_df, values='Weight', names=rec_weights_df.index, title="Rec. Allocation by Stock")
@@ -386,11 +407,14 @@ if solutions is not None:
         st.header("Explore the Full 3D Pareto Frontier")
         st.markdown("Here you can see *all* optimal solutions found by the AI. This plot helps you understand the *inherent trade-offs* between all three goals.")
         
+        # Color by AI Confidence if available, else Sharpe
+        color_col = 'Prob_Score' if 'Prob_Score' in solutions else 'Prob_Sharpe'
+
         fig_3d = px.scatter_3d(solutions,
                             x='CVaR_Risk_Display',
                             y='Return_Display',
                             z='ESG_Score',
-                            color='Prob_Sharpe',
+                            color=color_col,
                             title=f'3D Pareto Frontier ({period})',
                             hover_data=['CVaR_Risk_Display', 'Return_Display', 'ESG_Score', 'Prob_Sharpe']
                             )
