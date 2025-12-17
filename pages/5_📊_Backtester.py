@@ -14,32 +14,63 @@ st.set_page_config(page_title="Portfolio Backtester", page_icon="📊", layout="
 st.title("📊 Portfolio Backtester")
 
 # ===================================================
-# --- 1. Load Base Data (Non-Dynamic) ---
+# --- 1. Load Base Data (Bulletproof Version) ---
 # ===================================================
 @st.cache_data
 def load_base_data():
     """
-    Loads the price data and benchmark, which are static.
+    Loads the price data and benchmark with triple-layer fallback.
     """
+    # 1. Load Price Data
     try:
         price_data = pd.read_csv('backtest_price_data.csv', index_col='Date', parse_dates=True)
+        # Force timezone-naive to prevent matching errors
+        if price_data.index.tz is not None:
+            price_data.index = price_data.index.tz_localize(None)
     except FileNotFoundError:
         st.error("Error: 'backtest_price_data.csv' not found.")
-        st.info("Please ensure 'main.py' has finished running successfully.")
         return None, None
     
-    try:
-        nifty = yf.download('^NSEI', start=price_data.index.min(), end=price_data.index.max())
-        if nifty.empty:
-            st.error("Could not download NIFTY 50 benchmark data.")
-            return price_data, None
-        nifty_clean = nifty['Close'].ffill().bfill()
-    except Exception as e:
-        st.error(f"Error downloading NIFTY 50 data: {e}")
-        return price_data, None
+    # 2. Load Benchmark (The Fix)
+    nifty_clean = None
+    tickers_to_try = ['^NSEI', 'NIFTYBEES.NS'] # Index first, then ETF as backup
+    
+    for ticker in tickers_to_try:
+        try:
+            # Download "Max" data to avoid date-range errors
+            # auto_adjust=True fixes split/dividend adjustments
+            bench = yf.download(ticker, period="max", progress=False, auto_adjust=True)
+            
+            # Handle Multi-level columns (yfinance update fix)
+            if isinstance(bench.columns, pd.MultiIndex):
+                try:
+                    bench = bench.xs(ticker, axis=1, level=1)
+                except:
+                    pass # Keep structure if xs fails
+
+            if 'Close' in bench.columns and not bench.empty:
+                # Timezone fix
+                if bench.index.tz is not None:
+                    bench.index = bench.index.tz_localize(None)
+                
+                # Align dates to our price data
+                start_dt = price_data.index.min()
+                end_dt = price_data.index.max()
+                
+                bench_slice = bench['Close'].loc[start_dt:end_dt]
+                
+                if not bench_slice.empty:
+                    nifty_clean = bench_slice.ffill().bfill()
+                    break # Success! Stop trying tickers.
+                    
+        except Exception as e:
+            print(f"Failed to load {ticker}: {e}")
+            continue
+
+    if nifty_clean is None:
+        st.error("⚠️ Comparison Index Unavailable: Could not load NIFTY 50 data.")
     
     return price_data, nifty_clean
-
 # ========================================================
 # --- 2. Load Period-Specific Data (Dynamic) ---
 # ========================================================
