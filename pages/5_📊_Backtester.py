@@ -31,7 +31,7 @@ def load_base_data():
         st.error("Error: 'backtest_price_data.csv' not found.")
         return None, None
     
-    # 2. Load Benchmark (The Fix)
+    # 2. Load Benchmark Data with Fallbacks
     nifty_clean = None
     tickers_to_try = ['^NSEI', 'NIFTYBEES.NS'] # Index first, then ETF as backup
     

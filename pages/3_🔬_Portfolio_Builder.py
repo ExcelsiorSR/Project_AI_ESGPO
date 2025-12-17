@@ -138,7 +138,7 @@ if solutions is not None:
     top_portfolio = solutions.loc[solutions['Return'].idxmax()]
     top_portfolio_index = top_portfolio.name
 
-    # Check if we have the 'Prob_Score' column (New backend feature)
+    # Check if we have the 'Prob_Score' column (for AI models)
     has_prob_score = 'Prob_Score' in top_portfolio
     
     cols = st.columns(5 if has_prob_score else 4)

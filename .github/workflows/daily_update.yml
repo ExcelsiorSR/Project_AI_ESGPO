@@ -1,0 +1,50 @@
+name: Daily Portfolio Update
+
+on:
+  schedule:
+    # Running at 3:29 UTC daily (which is 8:59 AM IST)
+    - cron: '29 3 * * *'
+  workflow_dispatch: # Allowing manual runs for testing
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # --- Installing TA-Lib  ---
+      - name: Install TA-Lib C Library
+        run: |
+          wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
+          tar -xzf ta-lib-0.4.0-src.tar.gz
+          cd ta-lib/
+          ./configure --prefix=/usr
+          make
+          sudo make install
+      
+      - name: Install Python Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Optimization Script
+        run: python main_1.py
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add *.csv
+          # The commit will fail if there are no changes, so we allow it to exit gracefully
+          git commit -m "📈 Auto-update: Daily portfolio data" || echo "No changes to commit"
+          git push
