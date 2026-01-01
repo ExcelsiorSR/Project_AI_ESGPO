@@ -6,7 +6,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("Welcome to the AI-Driven ESG Optimizer 🌿")
+st.title("Welcome to the AI-Driven ESG Portfolio Optimizer 🌿")
 
 st.markdown("""
 This tool is a full-stack, multi-module AI system for modern, responsible investing in the **NIFTY 50**.
