@@ -39,6 +39,24 @@ The frontend is a multi-page Streamlit application.
 * **UI:** `Streamlit`, `plotly` (for interactive 3D scatter plots, pie charts, and treemaps).
 * **State Management:** `st.session_state` is used to create a seamless user experience, passing portfolio choices and recommendations between pages for one-click backtesting.
 
+## 🧮 Mathematical Framework
+
+### 1. Expected Return (XGBoost Proxy)
+Instead of predicting raw prices, we classify the directional trend ($P_{up}$). The expected return is derived as:
+$$E[R] = (P_{up} \times \mu_{gain}) - ((1 - P_{up}) \times \mu_{loss})$$
+*Where $\mu_{gain}$ and $\mu_{loss}$ are the historical averages of positive/negative returns.*
+
+### 2. Tail Risk (CVaR)
+We minimize Conditional Value at Risk (95%) to protect against "Black Swan" events:
+$$F_{2}(w) = \frac{1}{1-\alpha} \int_{\alpha}^{1} \text{VaR}_{\gamma}(w) d\gamma$$
+
+### 3. Optimization Objective (NSGA-II)
+The Genetic Algorithm solves for weights $w$ to optimize three conflicting objectives:
+1.  **Maximize:** $\sum w_i \cdot E[R]_i$ (Return)
+2.  **Minimize:** $\text{CVaR}_{0.95}(w)$ (Risk)
+3.  **Maximize:** $\sum w_i \cdot \text{ESG}_i$ (Sustainability)
+
+**Constraints:** $\sum w_i = 1$ (Fully Invested), $w_i \le 0.20$ (Diversification).
 ---
 
 ## 🚀 How to Run Locally
