@@ -168,6 +168,12 @@ def get_master_data(start_date='2020-01-01', end_date='2025-11-01'):
     esg_df['Symbol'] = esg_df['Symbol'].apply(lambda x: x + '.NS')
     esg_df = esg_df.set_index('Symbol')
     tickers = esg_df.index.tolist()
+    # --- FIX: EXCLUDE BROKEN TICKERS ---
+    # We remove Tata Motors specifically to prevent the yfinance data crash
+    excluded_tickers = ['TATAMOTORS.NS'] 
+    tickers = [t for t in tickers if t not in excluded_tickers]
+    print(f"⚠️ Excluded {len(excluded_tickers)} tickers from download: {excluded_tickers}")
+    # -----------------------------------
     
     print("\n[Step 3/5] Downloading 5 years of financial data from yfinance...")
     raw_data = yf.download(tickers, start=start_date, end=end_date)
@@ -321,7 +327,10 @@ if n_stocks > 0:
         print(f"  > Saved '{solutions_file}' and '{weights_file}'.")
 
     # --- FINAL SAVE ---
-    backtest_data.to_csv('backtest_price_data.csv')
+    backtest_data.reset_index().rename(columns={'index': 'Date'}).to_csv(
+        'backtest_price_data.csv',
+        index=False
+    )
     master_df.to_csv('master_data_for_app.csv')
     print("\n---  FULL LOCAL PIPELINE IS COMPLETE!  ---")
     print("All result files have been saved.")

@@ -5,6 +5,7 @@ import yfinance as yf
 import warnings
 import numpy as np
 import datetime
+import os
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -14,31 +15,55 @@ st.set_page_config(page_title="Portfolio Backtester", page_icon="📊", layout="
 st.title("📊 Portfolio Backtester")
 
 # ===================================================
-# --- 1. Load Base Data (Bulletproof Version) ---
+# --- 1. Load Base Data (FIXED & ROBUST) ---
 # ===================================================
-@st.cache_data
+# Added ttl=3600 to prevent stale data from sticking forever
+@st.cache_data(ttl=3600)
 def load_base_data():
     """
     Loads the price data and benchmark with triple-layer fallback.
+    Updated with robust date parsing.
     """
     # 1. Load Price Data
     try:
-        price_data = pd.read_csv('backtest_price_data.csv', index_col='Date', parse_dates=True)
-        # Force timezone-naive to prevent matching errors
+        if not os.path.exists('backtest_price_data_v2.csv'):
+            st.error("Error: 'backtest_price_data.csv' not found. Please ensure data ingestion has run.")
+            return None, None
+
+        # Load without assuming index first to be safe
+        price_data = pd.read_csv('backtest_price_data_v2.csv')
+        
+        # --- FIX: Robust Date Column Finder ---
+        date_col = None
+        for col in price_data.columns:
+            if 'date' in col.lower():
+                date_col = col
+                break
+        
+        if date_col:
+            price_data[date_col] = pd.to_datetime(price_data[date_col])
+            price_data.set_index(date_col, inplace=True)
+        else:
+            # Fallback: Assume first column is date
+            price_data.iloc[:, 0] = pd.to_datetime(price_data.iloc[:, 0])
+            price_data.set_index(price_data.columns[0], inplace=True)
+
+        # Force Index to be Datetime and remove Timezone
+        price_data.index = pd.to_datetime(price_data.index)
         if price_data.index.tz is not None:
             price_data.index = price_data.index.tz_localize(None)
-    except FileNotFoundError:
-        st.error("Error: 'backtest_price_data.csv' not found.")
+
+    except Exception as e:
+        st.error(f"Error reading CSV: {e}")
         return None, None
     
-    # 2. Load Benchmark Data with Fallbacks
+    # 2. Load Benchmark Data with Fallbacks (Original Logic Preserved)
     nifty_clean = None
     tickers_to_try = ['^NSEI', 'NIFTYBEES.NS'] # Index first, then ETF as backup
     
     for ticker in tickers_to_try:
         try:
             # Download "Max" data to avoid date-range errors
-            # auto_adjust=True fixes split/dividend adjustments
             bench = yf.download(ticker, period="max", progress=False, auto_adjust=True)
             
             # Handle Multi-level columns (yfinance update fix)
@@ -46,7 +71,8 @@ def load_base_data():
                 try:
                     bench = bench.xs(ticker, axis=1, level=1)
                 except:
-                    pass # Keep structure if xs fails
+                    # Fallback flatten if structure is different
+                    bench.columns = [c[1] if isinstance(c, tuple) else c for c in bench.columns]
 
             if 'Close' in bench.columns and not bench.empty:
                 # Timezone fix
@@ -68,9 +94,10 @@ def load_base_data():
             continue
 
     if nifty_clean is None:
-        st.error("⚠️ Comparison Index Unavailable: Could not load NIFTY 50 data.")
+        st.warning("⚠️ Comparison Index Unavailable: Could not load NIFTY 50 data.")
     
     return price_data, nifty_clean
+
 # ========================================================
 # --- 2. Load Period-Specific Data (Dynamic) ---
 # ========================================================
@@ -99,7 +126,7 @@ def load_period_data(period_key):
         return None, None
 
 # ==================================================
-# --- 3. Backtesting Strategy ---
+# --- 3. Backtesting Strategy (Original Logic) ---
 # ==================================================
 def run_simple_backtest(price_data, weights_series, start_date, end_date, cash=100000):
     if weights_series is None or not isinstance(weights_series, pd.Series):
@@ -107,12 +134,15 @@ def run_simple_backtest(price_data, weights_series, start_date, end_date, cash=1
 
     # --- Filter data based on user-selected dates ---
     try:
-        start_ts = pd.Timestamp(start_date)
-        end_ts = pd.Timestamp(end_date)
+        start_ts = pd.to_datetime(start_date)
+        end_ts = pd.to_datetime(end_date)
+        
+        # Use copy to avoid SettingWithCopy warnings
         filtered_price_data = price_data.loc[start_ts:end_ts].copy()
         
         if filtered_price_data.empty or len(filtered_price_data) < 2:
             st.error("Error: Not enough data in the selected date range to run a backtest.")
+            st.caption(f"Debug: Available Data ends at {price_data.index.max().date()}")
             return None
     except Exception as e:
         st.error(f"Error filtering dates: {e}")
@@ -157,7 +187,7 @@ def run_simple_backtest(price_data, weights_series, start_date, end_date, cash=1
     }
 
 # ======================================================================
-# --- 4.  Backtest Display Function ---
+# --- 4.  Backtest Display Function (Original Formatting) ---
 # ======================================================================
 def display_backtest_results(stats, name, selected_weights, nifty_benchmark):
     if stats is None:
@@ -176,6 +206,7 @@ def display_backtest_results(stats, name, selected_weights, nifty_benchmark):
     
     if nifty_benchmark is not None:
         equity_curve = stats['Equity Curve']
+        # Align benchmark to portfolio dates
         nifty_series_aligned = nifty_benchmark.reindex(equity_curve.index).ffill().bfill()
         
         aligned_df = pd.concat([equity_curve, nifty_series_aligned], axis=1).dropna()
@@ -206,7 +237,7 @@ def display_backtest_results(stats, name, selected_weights, nifty_benchmark):
     st.dataframe(selected_weights[selected_weights > 0.01].sort_values(ascending=False))
 
 # ======================================================================
-# --- 5.  Main Page Logic (UPDATED FIX) ---
+# --- 5.  Main Page Logic (FIXED DATE PICKER) ---
 # ======================================================================
 price_data, nifty_benchmark = load_base_data()
 
@@ -216,7 +247,11 @@ if price_data is not None:
     
     # --- LOGIC: Smart Default Dates ---
     min_date = price_data.index.min().date()
-    max_date = price_data.index.max().date()
+    max_data_date = price_data.index.max().date()
+    
+    # --- FIX: Define 'Today' to allow selecting future/current dates ---
+    today = datetime.date.today()
+    picker_max = max(max_data_date, today) # Allow picking today even if CSV is 1 day old
     
     default_start = min_date 
     is_short_term = False
@@ -226,7 +261,7 @@ if price_data is not None:
         if st.session_state.deep_link_period in ['3D', '7D', '15D', '30D', '3M']:
             is_short_term = True
             # Set default start to 1 year ago for better chart resolution
-            suggested_start = max_date - datetime.timedelta(days=365)
+            suggested_start = picker_max - datetime.timedelta(days=365)
             if suggested_start > min_date:
                 default_start = suggested_start
 
@@ -239,15 +274,12 @@ if price_data is not None:
     st.markdown("Select the time frame you want to run the backtest on.")
     
     col1, col2 = st.columns(2)
-    # Define "Today" dynamically
-    today = datetime.date.today() 
-
     with col1:
-        # max_value is now 'today', not the CSV limit
-        start_date = st.date_input("Start Date", value=default_start, min_value=min_date, max_value=today)
+        # Use picker_max instead of max_data_date
+        start_date = st.date_input("Start Date", value=default_start, min_value=min_date, max_value=picker_max)
     with col2:
-        # Default value and max limit set to 'today'
-        end_date = st.date_input("End Date", value=today, min_value=min_date, max_value=today)
+        # Use picker_max
+        end_date = st.date_input("End Date", value=picker_max, min_value=min_date, max_value=picker_max)
         
     if start_date >= end_date:
         st.error("Error: Start Date must be before End Date.")
@@ -255,7 +287,7 @@ if price_data is not None:
 
     st.divider()
 
-    # --- CHECKING FOR DEEP LINK ---
+    # --- CHECKING FOR DEEP LINK (Original Logic) ---
     if 'deep_link_index' in st.session_state:
         st.header("2. Backtest Result")
         st.markdown("Running backtest for portfolio selected from the Builder...")
@@ -265,9 +297,6 @@ if price_data is not None:
         index = st.session_state.deep_link_index
         name = st.session_state.deep_link_name
         cash_amount = st.session_state.get('deep_link_cash', 100000)
-        
-        # --- FIX: DO NOT DELETE SESSION STATE HERE ---
-        # We keep the variables alive so they survive the page rerun when you change the date.
         
         # 3. Loading the correct data
         _, weights = load_period_data(period)
@@ -282,8 +311,7 @@ if price_data is not None:
         else:
             st.error("Could not load portfolio data. Please try again.")
         
-        # --- NEW RESET BUTTON ---
-        # This is the only way to "Clear" the deep link and go back to manual mode
+        # Reset Button
         if st.button("🔄 Run Another / Reset Backtester", type="secondary", use_container_width=True):
             st.session_state.pop('deep_link_index', None)
             st.session_state.pop('deep_link_name', None)
@@ -293,7 +321,7 @@ if price_data is not None:
             
         st.page_link("Home.py", label="Go to Home Page", icon="🏠")
 
-    # --- NO DEEP LINK: Showing manual dropdowns ---
+    # --- NO DEEP LINK: Manual Logic ---
     else:
         st.header("2. Select Strategy")
         st.markdown("See how your optimized portfolio would have performed in the selected time frame.")
