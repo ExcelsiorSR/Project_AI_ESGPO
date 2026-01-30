@@ -46,7 +46,7 @@ try:
         print("❌ CRITICAL ERROR: Downloaded data is still old! Yahoo API might be rate-limiting you.")
     else:
         # 7. Save to V2 Filename (To match your Backtester)
-        output_file = "backtest_price_data_v2.csv"
+        output_file = "backtest_price_data.csv"
         data.to_csv(output_file)
         print(f"✅ SUCCESS! Saved {len(data)} rows to '{output_file}'")
         print("   (Please check the file manually in VS Code now)")
