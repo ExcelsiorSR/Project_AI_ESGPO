@@ -239,10 +239,15 @@ if price_data is not None:
     st.markdown("Select the time frame you want to run the backtest on.")
     
     col1, col2 = st.columns(2)
+    # Define "Today" dynamically
+    today = datetime.date.today() 
+
     with col1:
-        start_date = st.date_input("Start Date", value=default_start, min_value=min_date, max_value=max_date)
+        # max_value is now 'today', not the CSV limit
+        start_date = st.date_input("Start Date", value=default_start, min_value=min_date, max_value=today)
     with col2:
-        end_date = st.date_input("End Date", value=max_date, min_value=min_date, max_value=max_date)
+        # Default value and max limit set to 'today'
+        end_date = st.date_input("End Date", value=today, min_value=min_date, max_value=today)
         
     if start_date >= end_date:
         st.error("Error: Start Date must be before End Date.")
