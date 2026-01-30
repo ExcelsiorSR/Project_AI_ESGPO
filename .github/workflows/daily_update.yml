@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: '3.10'
 
-      # --- Installing TA-Lib  ---
+      # --- Installing TA-Lib (Required for main.py) ---
       - name: Install TA-Lib C Library
         run: |
           wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
@@ -37,8 +37,17 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
+      # 1. Run the Heavy Optimization (Generates Portfolios)
       - name: Run Optimization Script
         run: python main.py
+
+      # 2. FAIL-SAFE: Run Force Update & Overwrite
+      # This ensures the backtester data is 100% fresh, ignoring main.py's data file
+      - name: Force Refresh Price Data
+        run: |
+          python force_update.py
+          # Overwrite the standard file with the fresh v2 data
+          mv backtest_price_data_v2.csv backtest_price_data.csv
 
       - name: Commit and Push Changes
         run: |
