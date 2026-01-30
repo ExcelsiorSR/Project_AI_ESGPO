@@ -26,12 +26,12 @@ def load_base_data():
     """
     # 1. Load Price Data
     try:
-        if not os.path.exists('backtest_price_data_v2.csv'):
+        if not os.path.exists('backtest_price_data.csv'):
             st.error("Error: 'backtest_price_data.csv' not found. Please ensure data ingestion has run.")
             return None, None
 
         # Load without assuming index first to be safe
-        price_data = pd.read_csv('backtest_price_data_v2.csv')
+        price_data = pd.read_csv('backtest_price_data.csv')
         
         # --- FIX: Robust Date Column Finder ---
         date_col = None
