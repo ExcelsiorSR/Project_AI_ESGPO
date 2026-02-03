@@ -153,9 +153,14 @@ def calculate_cvar(returns, alpha=0.95):
 # ======================================================================
 # --- Data Loading Function  ---
 # ======================================================================
-def get_master_data(start_date='2020-01-01', end_date='2025-11-01'):
+# --- UPDATE THIS FUNCTION IN MAIN.PY ---
+
+def get_master_data(start_date='2020-01-01', end_date=None):
+    # 1. Dynamic End Date to fix the lagging date.
+    if end_date is None:
+        end_date = datetime.date.today().strftime('%Y-%m-%d')
     
-    print("\n[Step 2/5] Loading 'final_data.csv'...")
+    print(f"\n[Step 2/5] Loading 'final_data.csv'...")
     try:
         esg_df = pd.read_csv('final_data.csv') 
     except FileNotFoundError:
@@ -166,16 +171,17 @@ def get_master_data(start_date='2020-01-01', end_date='2025-11-01'):
     esg_df = esg_df[['Symbol', esg_column_name, 'Sector']]
     esg_df = esg_df.dropna(subset=[esg_column_name])
     esg_df['Symbol'] = esg_df['Symbol'].apply(lambda x: x + '.NS')
+    
     esg_df = esg_df.set_index('Symbol')
     tickers = esg_df.index.tolist()
+    
     # --- FIX: EXCLUDE BROKEN TICKERS ---
-    # We remove Tata Motors specifically to prevent the yfinance data crash
     excluded_tickers = ['TATAMOTORS.NS'] 
     tickers = [t for t in tickers if t not in excluded_tickers]
-    print(f"⚠️ Excluded {len(excluded_tickers)} tickers from download: {excluded_tickers}")
+    print(f"⚠️ Excluded {len(excluded_tickers)} tickers (e.g., Tata Motors) to prevent crashes.")
     # -----------------------------------
     
-    print("\n[Step 3/5] Downloading 5 years of financial data from yfinance...")
+    print(f"\n[Step 3/5] Downloading data from {start_date} to {end_date}...")
     raw_data = yf.download(tickers, start=start_date, end=end_date)
     
     price_data_filled = raw_data.ffill().bfill()
