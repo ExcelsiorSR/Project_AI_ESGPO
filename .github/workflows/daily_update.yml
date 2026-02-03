@@ -46,8 +46,6 @@ jobs:
       - name: Force Refresh Price Data
         run: |
           python force_update.py
-          # Overwrite the standard file with the fresh v2 data
-          mv backtest_price_data_v2.csv backtest_price_data.csv
 
       - name: Commit and Push Changes
         run: |
