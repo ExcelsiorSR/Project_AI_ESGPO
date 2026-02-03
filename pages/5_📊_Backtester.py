@@ -18,7 +18,7 @@ st.title("📊 Portfolio Backtester")
 # --- 1. Load Base Data (FIXED & ROBUST) ---
 # ===================================================
 # Added ttl=3600 to prevent stale data from sticking forever
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=60)
 def load_base_data():
     """
     Loads the price data and benchmark with triple-layer fallback.
