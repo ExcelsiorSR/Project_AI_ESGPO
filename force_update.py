@@ -3,8 +3,6 @@ import pandas as pd
 import os
 from datetime import datetime
 
-# 1. Define the Healthy Tickers (REMOVED TATAMOTORS.NS temporarily)
-# If Tata Motors is critical, we can add it back later, but let's fix the data first.
 TICKERS = [
     "^NSEI", "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", 
     "INFY.NS", "SBIN.NS", "BHARTIARTL.NS", "ITC.NS", "LT.NS",
