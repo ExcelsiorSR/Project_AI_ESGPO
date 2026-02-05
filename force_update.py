@@ -1,53 +1,74 @@
 import yfinance as yf
 import pandas as pd
+import datetime
 import os
-from datetime import datetime
 
-TICKERS = [
-    "^NSEI", "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", 
-    "INFY.NS", "SBIN.NS", "BHARTIARTL.NS", "ITC.NS", "LT.NS",
-    "KOTAKBANK.NS", "AXISBANK.NS", "HINDUNILVR.NS"
-]
+# --- CONFIGURATION ---
+# 1. Set the Start Date to 2020 (or earlier) to enable long backtests
+START_DATE = "2020-01-01" 
+END_DATE = datetime.date.today().strftime('%Y-%m-%d')
 
-print(f"🚀 Starting FORCE UPDATE for {len(TICKERS)} tickers...")
+# 2. Define the file name
+OUTPUT_FILE = "backtest_price_data.csv"
 
-try:
-    # 2. Download Data with auto_adjust to fix split issues
-    print("📉 Downloading from Yahoo Finance...")
-    data = yf.download(TICKERS, period="1y", interval="1d", auto_adjust=True, progress=False)
-    
-    # 3. Flatten Multi-Index Headers (The yfinance fix)
-    if isinstance(data.columns, pd.MultiIndex):
-        print("🔧 Flattening column headers...")
-        # Check if 'Close' exists, otherwise try 'Adj Close'
-        try:
-            if 'Close' in data.columns.get_level_values(0):
-                data = data.xs('Close', level=0, axis=1)
-            elif 'Adj Close' in data.columns.get_level_values(0):
-                 data = data.xs('Adj Close', level=0, axis=1)
-        except:
-            pass # Fallback to raw download if structure is simple
+def force_update():
+    print(f"\n🚀 Starting FORCE UPDATE from {START_DATE} to {END_DATE}...")
 
-    # 4. Clean Date Index
-    data.index = pd.to_datetime(data.index)
-    if data.index.tz is not None:
-        data.index = data.index.tz_localize(None)
+    # --- 1. Load Ticker List ---
+    # We try to get the list from final_data.csv so it matches your optimized portfolios
+    try:
+        if os.path.exists("final_data.csv"):
+            meta_df = pd.read_csv("final_data.csv")
+            # Ensure we are looking at the right column
+            if 'Symbol' in meta_df.columns:
+                tickers = meta_df['Symbol'].unique().tolist()
+                # Append .NS if missing
+                tickers = [t + ".NS" if not str(t).endswith(".NS") else t for t in tickers]
+            else:
+                # Fallback list if CSV structure is different
+                print("⚠️ 'Symbol' column not found. Using default NIFTY list.")
+                tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS"]
+        else:
+            print("⚠️ final_data.csv not found. Using fallback list.")
+            tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS"]
+            
+    except Exception as e:
+        print(f"Error reading ticker list: {e}")
+        return
 
-    # 5. Drop empty columns (Clean up failed downloads)
-    data = data.dropna(axis=1, how='all')
+    # --- 2. THE SAFETY FILTER (Crucial) ---
+    # We remove the "Poison Pill" tickers that crash the pipeline
+    excluded = ['TATAMOTORS.NS']
+    tickers = [t for t in tickers if t not in excluded]
+    print(f"📋 Downloading data for {len(tickers)} tickers (Excluded: {excluded})...")
 
-    # 6. VERIFY DATES
-    last_date = data.index[-1].date()
-    print(f"📅 Data Ends On: {last_date}")
+    # --- 3. Download Full History ---
+    # We download specifically from START_DATE to ensure history is preserved
+    try:
+        data = yf.download(tickers, start=START_DATE, end=END_DATE, progress=True)
+        
+        # --- 4. Flatten Multi-Index Columns (Fix for yfinance update) ---
+        if isinstance(data.columns, pd.MultiIndex):
+            # If we have (Price, Ticker), we just want 'Close' prices usually
+            # But for backtesting, we might need OHLC. 
+            # If your app expects just 'Close' prices for everything:
+            if 'Close' in data.columns:
+                data = data['Close']
+            
+            # If data is still multi-index (Ticker columns), it's fine for simple CSV
+            
+        # --- 5. Save Directly to the Final File ---
+        if not data.empty:
+            # Drop columns that are all NaN (failed downloads)
+            data = data.dropna(axis=1, how='all')
+            
+            data.to_csv(OUTPUT_FILE)
+            print(f"✅ SUCCESS! Saved {len(data)} rows (from {data.index.min().date()} to {data.index.max().date()}) to '{OUTPUT_FILE}'")
+        else:
+            print("❌ Error: Download returned empty data.")
 
-    if last_date < datetime(2026, 1, 1).date():
-        print("❌ CRITICAL ERROR: Downloaded data is still old! Yahoo API might be rate-limiting you.")
-    else:
-        # 7. Save to V2 Filename (To match your Backtester)
-        output_file = "backtest_price_data.csv"
-        data.to_csv(output_file)
-        print(f"✅ SUCCESS! Saved {len(data)} rows to '{output_file}'")
-        print("   (Please check the file manually in VS Code now)")
+    except Exception as e:
+        print(f"❌ CRITICAL FAIL: {e}")
 
-except Exception as e:
-    print(f"❌ Script Failed: {e}")
+if __name__ == "__main__":
+    force_update()
