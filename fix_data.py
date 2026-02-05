@@ -1,83 +1,74 @@
 import yfinance as yf
 import pandas as pd
+import datetime
 import os
-import subprocess
-import sys
 
-# ==========================================
-# CONFIGURATION
-# ==========================================
-DATA_FILE = "backtest_price_data.csv"
-MAIN_SCRIPT = "main.py"
+# --- CONFIGURATION ---
+# 1. Set the Start Date to 2020 (or earlier) to enable long backtests
+START_DATE = "2020-01-01" 
+END_DATE = datetime.date.today().strftime('%Y-%m-%d')
 
-# List of tickers to ensure we cover your portfolio
-# (Includes Nifty 50 and major stocks to be safe)
-TICKERS = [
-    "^NSEI", "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", 
-    "INFY.NS", "SBIN.NS", "BHARTIARTL.NS", "ITC.NS", "LT.NS",
-    "KOTAKBANK.NS", "AXISBANK.NS", "HINDUNILVR.NS", "TATAMOTORS.NS"
-]
+# 2. Define the file name
+OUTPUT_FILE = "backtest_price_data.csv"
 
-def clean_and_download_data():
-    print(f"📉 Downloading fresh data for {len(TICKERS)} tickers...")
+def force_update():
+    print(f"\n🚀 Starting FORCE UPDATE from {START_DATE} to {END_DATE}...")
+
+    # --- 1. Load Ticker List ---
+    # We try to get the list from final_data.csv so it matches your optimized portfolios
     try:
-        # 1. Download Max Data
-        data = yf.download(TICKERS, period="max", auto_adjust=True, progress=False)
-        
-        # 2. FLATTEN HEADERS (The Critical Fix)
-        # New yfinance returns MultiIndex columns. We need to drop the 'Price' level.
-        if isinstance(data.columns, pd.MultiIndex):
-            print("🔧 Detected Multi-Level Columns. Flattening...")
-            # If 'Close' is a level, select it. Otherwise, just drop the top level.
-            try:
-                if 'Close' in data.columns.get_level_values(0):
-                     data = data.xs('Close', level=0, axis=1)
-                elif 'Adj Close' in data.columns.get_level_values(0):
-                     data = data.xs('Adj Close', level=0, axis=1)
-                else:
-                    # Fallback: Just keep the ticker level (usually level 1)
-                    data.columns = data.columns.get_level_values(1)
-            except Exception as e:
-                # Last resort flatten
-                data.columns = [col[1] if isinstance(col, tuple) else col for col in data.columns]
-
-        # 3. Ensure Index is Datetime and Sorted
-        data.index = pd.to_datetime(data.index)
-        data = data.sort_index()
-        
-        # 4. Remove Timezone info (Fixes comparison errors)
-        if data.index.tz is not None:
-            data.index = data.index.tz_localize(None)
-
-        # 5. Save Clean CSV
-        data.to_csv(DATA_FILE)
-        print(f"✅ Success! Saved clean data to {DATA_FILE}")
-        print(f"📅 Latest Date: {data.index[-1]}")
-        
-        return True
-
-    except Exception as e:
-        print(f"❌ Data Download Failed: {e}")
-        return False
-
-def run_optimizer():
-    print(f"🚀 Running {MAIN_SCRIPT} to update portfolios...")
-    try:
-        # Run main.py using the same python environment
-        result = subprocess.run([sys.executable, MAIN_SCRIPT], capture_output=True, text=True)
-        
-        if result.returncode == 0:
-            print(f"✅ Optimization Complete!")
-            print(result.stdout[-500:]) # Print last 500 chars of output
+        if os.path.exists("final_data.csv"):
+            meta_df = pd.read_csv("final_data.csv")
+            # Ensure we are looking at the right column
+            if 'Symbol' in meta_df.columns:
+                tickers = meta_df['Symbol'].unique().tolist()
+                # Append .NS if missing
+                tickers = [t + ".NS" if not str(t).endswith(".NS") else t for t in tickers]
+            else:
+                # Fallback list if CSV structure is different
+                print("⚠️ 'Symbol' column not found. Using default NIFTY list.")
+                tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS"]
         else:
-            print(f"⚠️ {MAIN_SCRIPT} finished with errors (might be okay if it just saved files).")
-            print(result.stderr)
+            print("⚠️ final_data.csv not found. Using fallback list.")
+            tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS"]
             
     except Exception as e:
-        print(f"❌ Failed to run optimizer: {e}")
+        print(f"Error reading ticker list: {e}")
+        return
+
+    # --- 2. THE SAFETY FILTER (Crucial) ---
+    # We remove the "Poison Pill" tickers that crash the pipeline
+    excluded = ['TATAMOTORS.NS']
+    tickers = [t for t in tickers if t not in excluded]
+    print(f"📋 Downloading data for {len(tickers)} tickers (Excluded: {excluded})...")
+
+    # --- 3. Download Full History ---
+    # We download specifically from START_DATE to ensure history is preserved
+    try:
+        data = yf.download(tickers, start=START_DATE, end=END_DATE, progress=True)
+        
+        # --- 4. Flatten Multi-Index Columns (Fix for yfinance update) ---
+        if isinstance(data.columns, pd.MultiIndex):
+            # If we have (Price, Ticker), we just want 'Close' prices usually
+            # But for backtesting, we might need OHLC. 
+            # If your app expects just 'Close' prices for everything:
+            if 'Close' in data.columns:
+                data = data['Close']
+            
+            # If data is still multi-index (Ticker columns), it's fine for simple CSV
+            
+        # --- 5. Save Directly to the Final File ---
+        if not data.empty:
+            # Drop columns that are all NaN (failed downloads)
+            data = data.dropna(axis=1, how='all')
+            
+            data.to_csv(OUTPUT_FILE)
+            print(f"✅ SUCCESS! Saved {len(data)} rows (from {data.index.min().date()} to {data.index.max().date()}) to '{OUTPUT_FILE}'")
+        else:
+            print("❌ Error: Download returned empty data.")
+
+    except Exception as e:
+        print(f"❌ CRITICAL FAIL: {e}")
 
 if __name__ == "__main__":
-    print("--- STARTING FINAL FIX ---")
-    if clean_and_download_data():
-        run_optimizer()
-    print("--- DONE. NOW RESTART STREAMLIT ---")
+    force_update()
